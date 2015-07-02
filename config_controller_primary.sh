@@ -28,7 +28,6 @@ echo -n "%%PUBLIC_KEY%%" >> .ssh/authorized_keys
 chmod 600 .ssh/*
 
 found=0
-found_private=0
 tmp_file=$(mktemp)
 
 for interface in eth1 eth2 eth3 eth4; do
@@ -40,36 +39,18 @@ cat $INTERFACES | while read line; do
     found=1
   fi
 
-  if echo "$line" | grep "# Label private"; then
-    found_private=1
-  fi
-
   if [ $found -eq 1 ] && [ "$line" = "" ]; then
     found=0
   fi
 
-  if [ $found_private -eq 1 ] && [ "$line" = "" ]; then
-    echo "bridge_ports eth1" >> ${INTERFACES_D}/br-snet.cfg
-    found_private=0
-  fi
-
-  if [ $found -eq 0 ] && [ $found_private -eq 0 ]; then
+  if [ $found -eq 0 ]; then
     echo "$line" >> $tmp_file
-  fi
-
-  if [ $found_private -eq 1 ]; then
-    echo "$line" | sed -e 's/eth1/br-snet/g' >> ${INTERFACES_D}/br-snet.cfg
   fi
 done
 
 echo "source ${INTERFACES_D}/*.cfg" >> $tmp_file
 
 mv -f $tmp_file ${INTERFACES}
-
-cat > ${INTERFACES_D}/eth1.cfg << "EOF"
-auto eth1
-iface eth1 inet manual
-EOF
 
 cat > ${INTERFACES_D}/eth2.cfg << "EOF"
 auto eth2
@@ -116,6 +97,14 @@ iface vxlan5 inet manual
         pre-up ip link add vxlan5 type vxlan id 5 group 239.0.0.16 ttl 4 dev eth4
         up ip link set vxlan5 up
         down ip link set vxlan5 down
+EOF
+
+cat > ${INTERFACES_D}/br-snet.cfg << "EOF"
+auto br-snet
+iface br-snet inet static
+    address 172.29.248.1
+    netmask 255.255.252.0
+    bridge_ports none
 EOF
 
 cat > ${INTERFACES_D}/br-storage.cfg << "EOF"

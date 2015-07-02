@@ -90,6 +90,9 @@ global_overrides:
         container_interface: "eth3"
         container_type: "veth"
         ip_from_q: "snet"
+        static_routes:
+          - cidr: 10.176.0.0/12
+            gateway: 172.29.248.1
     - network:
         group_binds:
           - neutron_linuxbridge_agent
